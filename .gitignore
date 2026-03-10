@@ -1,0 +1,17 @@
+# Temporary files
+.tmp/
+
+# Environment variables
+.env
+
+# Google Credentials
+credentials.json
+token.json
+
+# Python
+__pycache__/
+*.pyc
+
+mcp_config.json
+*.docx
+*.pdf
