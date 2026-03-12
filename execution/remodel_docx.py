@@ -2,7 +2,7 @@ import sys
 import json
 import os
 import re
-from docx import Document
+from docx import Document  
 from docx.enum.text import WD_TAB_ALIGNMENT
 
 def delete_paragraph(paragraph):
@@ -60,13 +60,16 @@ def regex_replace_in_paragraph(paragraph, pattern_str, value):
     Single-pass only — called once per slot per paragraph, as one replacement 
     is sufficient and prevents infinite loops.
     """
-    full_text = ""
+    full_text_chars = []
     char_map = []
     for r_idx, run in enumerate(paragraph.runs):
-        for c_idx, char in enumerate(run.text):
-            char_map.append((r_idx, c_idx))
-            full_text += char
+        run_text = getattr(run, "text", "")
+        if isinstance(run_text, str):
+            for c_idx in range(len(run_text)):
+                char_map.append((r_idx, c_idx))
+                full_text_chars.append(run_text[c_idx])
             
+    full_text = "".join(full_text_chars)
     match = re.search(pattern_str, full_text)
     if not match:
         return
@@ -110,7 +113,7 @@ def process_paragraph(paragraph, mapping, usable_width=None):
     """
     merge_runs(paragraph)
     full_text = paragraph.text
-    matches = list(set(re.findall(r'\[SLOT_[^\]]*\]', full_text)))
+    matches = list(set(re.findall(r'\[[A-Za-z][A-Za-z0-9_]+\]', full_text)))
     
     if not matches:
         return False

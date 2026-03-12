@@ -1,0 +1,22 @@
+# Job Board Browser Allowlist
+# Used by the job-scraper skill to restrict navigation to approved domains only.
+# Secure Mode: the browser subagent will NOT visit any domain not listed here.
+# Add one domain per line. Subdomains are covered by parent domain entries.
+
+greenhouse.io
+boards.greenhouse.io
+lever.co
+jobs.lever.co
+linkedin.com
+indeed.com
+wellfound.com
+glassdoor.com
+builtin.com
+smartrecruiters.com
+workday.com
+myworkdayjobs.com
+icims.com
+careers.google.com
+jobs.apple.com
+amazon.jobs
+microsoft.com/en-us/jobs
