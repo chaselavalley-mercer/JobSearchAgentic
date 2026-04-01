@@ -128,10 +128,21 @@ def extract_jobs_with_llm(text: str) -> List[dict]:
     chain = prompt | structured_llm
     
     try:
-        # Limit text length to avoid token limits for very large pages
-        max_chars = 30000 
+        max_chars = 30000
         result = chain.invoke({"text": text.strip()[:max_chars]})
-        return [job.model_dump() for job in result.jobs]
+
+        # with_structured_output can return a Pydantic model OR a raw dict
+        # depending on whether LangChain successfully deserialized the response
+        if isinstance(result, dict):
+            jobs_list = result.get("jobs", [])
+            return [
+                job.model_dump() if hasattr(job, "model_dump") else job
+                for job in jobs_list
+            ]
+        else:
+            # Expected path: result is a JobListings Pydantic instance
+            return [job.model_dump() for job in result.jobs]
+
     except Exception as e:
         print(f"[!] LLM Extraction Error: {e}. Falling back to mock extraction...")
         return [
@@ -182,6 +193,14 @@ def save_results(data: list, user: str = "chase_lavalley"):
             except json.JSONDecodeError:
                 pass
                 
+    # Normalize analysis_payload list fields to newline-joined strings before saving
+    for job in data:
+        if isinstance(job.get("analysis_payload"), dict):
+            job["analysis_payload"] = {
+                k: "\n".join(v) if isinstance(v, list) else v
+                for k, v in job["analysis_payload"].items()
+            }
+
     # Combine and save
     combined_data = existing_data + data
     

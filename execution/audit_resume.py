@@ -104,10 +104,15 @@ def build_knowledge_corpus(knowledge_path: str) -> set[str]:
         raw = f.read()
 
     # Tokenize: split on non-alphanumeric, lowercase, filter short/stopword tokens
+    # Refined regex to avoid capturing trailing punctuation unless it's part of a tech tag
     tokens = re.findall(r"[A-Za-z0-9][A-Za-z0-9\+\#\.]*", raw)
     corpus = set()
     for tok in tokens:
-        lower = tok.lower()
+        # Strip trailing periods if they aren't part of a known tech pattern like .NET
+        processed_tok = tok.rstrip('.')
+        if not processed_tok:
+            continue
+        lower = processed_tok.lower()
         if len(lower) >= MIN_CLAIM_TOKEN_LEN and lower not in STOPWORDS:
             corpus.add(lower)
 
@@ -123,7 +128,10 @@ def extract_claim_tokens(line: str) -> list[str]:
     tokens = re.findall(r"[A-Za-z0-9][A-Za-z0-9\+\#\.]*", line)
     claims = []
     for tok in tokens:
-        lower = tok.lower()
+        processed_tok = tok.rstrip('.')
+        if not processed_tok:
+            continue
+        lower = processed_tok.lower()
         if len(lower) < MIN_CLAIM_TOKEN_LEN:
             continue
         if lower in STOPWORDS:
