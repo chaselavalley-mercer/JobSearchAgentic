@@ -1,0 +1,408 @@
+# portals.yml — Chase LaValley
+# Scout routing map: tells the scout HOW to find jobs at each company.
+#
+# Discovery strategy (3 levels, all run and results are merged):
+#   Level 1 — Playwright:      navigate careers_url directly (real-time, works on SPAs)
+#   Level 2 — Greenhouse API:  fetch structured JSON (fast, Greenhouse companies only)
+#   Level 3 — WebSearch:       broad search_queries with site: filters (new company discovery)
+#
+# Each company entry needs at minimum: name, careers_url, enabled.
+# Add api: when the company uses Greenhouse — it's faster and more reliable than Playwright.
+# scan_method: playwright (default) | websearch | greenhouse_api
+
+# ---------------------------------------------------------------------------
+# TITLE FILTER
+# Applied to every job title found during discovery.
+# Rule: at least 1 positive must match AND 0 negatives must match (case-insensitive).
+# seniority_boost: title matches these get surfaced first but are not required.
+# ---------------------------------------------------------------------------
+
+title_filter:
+  positive:
+    # --- AI / ML roles ---
+    - "AI Engineer"
+    - "Machine Learning"
+    - "ML Engineer"
+    - "AI"
+    - "LLM"
+    - "Generative AI"
+    - "Applied AI"
+    - "AI Research"
+    - "NLP"
+    - "Computer Vision"
+    - "MLOps"
+    # --- Embedded / Hardware roles ---
+    - "Embedded"
+    - "Embedded Systems"
+    - "Firmware"
+    - "VHDL"
+    - "FPGA"
+    - "Hardware Engineer"
+    - "Computer Engineer"
+    - "Systems Engineer"
+    - "Controls Engineer"
+    # --- Broad engineering (catch-all for hybrid roles) ---
+    - "Software Engineer"
+    - "Automation Engineer"
+    - "Robotics"
+
+  negative:
+    # Seniority gates (your experience_max_years is 2)
+    - "Senior"
+    - "Staff"
+    - "Lead"
+    - "Manager"
+    - "Principal"
+    - "Director"
+    - "Head of"
+    - "VP"
+    # Stack mismatches
+    - "iOS"
+    - "Android"
+    - "PHP"
+    - "Ruby"
+    - "Salesforce Admin"
+    - "SAP"
+    - "COBOL"
+    - "Mainframe"
+    - "Blockchain"
+    - "Web3"
+    - "Crypto"
+    # Role type mismatches
+    - "Recruiter"
+    - "Marketing"
+    - "Sales"
+    - "Designer"
+    - "Technical Writer"
+
+  seniority_boost:
+    # These aren't blockers — just surfaced higher in your feed
+    - "New Grad"
+    - "Entry Level"
+    - "Associate"
+    - "Junior"
+    - "University"
+    - "2026"
+
+# ---------------------------------------------------------------------------
+# SEARCH QUERIES (Level 3 — WebSearch)
+# Each query runs a web search. Use site: filters to target specific job boards.
+# Good for discovering companies NOT in tracked_companies below.
+# ---------------------------------------------------------------------------
+
+search_queries:
+
+  # --- AI Engineer roles on major boards ---
+  - name: AI Engineer — Greenhouse
+    query: 'site:job-boards.greenhouse.io "AI Engineer" OR "Machine Learning Engineer" "entry level" OR "new grad" OR "0-2 years"'
+    enabled: true
+
+  - name: AI Engineer — Lever
+    query: 'site:jobs.lever.co "AI Engineer" OR "ML Engineer" "entry level" OR "new grad" Atlanta OR Macon OR remote'
+    enabled: true
+
+  - name: AI Engineer — Ashby
+    query: 'site:jobs.ashbyhq.com "AI Engineer" OR "Applied AI" "entry level" OR "new grad" OR "university"'
+    enabled: true
+
+  # --- Embedded / Hardware roles ---
+  - name: Embedded Engineer — Greenhouse
+    query: 'site:job-boards.greenhouse.io "Embedded" OR "Firmware" OR "FPGA" OR "VHDL" "entry level" OR "new grad" OR "associate" Atlanta OR Georgia OR remote'
+    enabled: true
+
+  - name: Embedded Engineer — Lever
+    query: 'site:jobs.lever.co "Embedded Systems" OR "Hardware Engineer" OR "Computer Engineer" "0-2 years" OR "new grad" Atlanta OR remote'
+    enabled: true
+
+  - name: Embedded / Hardware — Indeed aggregator
+    query: '"Embedded Engineer" OR "Firmware Engineer" OR "Hardware Engineer" "new grad" OR "entry level" site:greenhouse.io OR site:lever.co Atlanta OR Georgia OR remote'
+    enabled: true
+
+  # --- Computer Engineering / Systems ---
+  - name: Computer Engineer — Georgia + Remote
+    query: '"Computer Engineer" OR "Systems Engineer" "entry level" OR "new grad" OR "0-2 years" Atlanta OR Macon OR Smyrna OR Georgia OR remote site:job-boards.greenhouse.io OR site:jobs.lever.co'
+    enabled: true
+
+  # --- ML / Computer Vision roles ---
+  - name: ML Engineer — New Grad
+    query: 'site:job-boards.greenhouse.io OR site:jobs.lever.co "Machine Learning" OR "Computer Vision" "new grad" OR "university hire" OR "entry level" 2026'
+    enabled: true
+
+  # --- Wellfound (startup-focused) ---
+  - name: AI / ML — Wellfound startups
+    query: 'site:wellfound.com "AI Engineer" OR "ML Engineer" OR "Embedded" "entry level" OR "new grad" remote OR Atlanta'
+    enabled: true
+
+# ---------------------------------------------------------------------------
+# TRACKED COMPANIES (Level 1 + 2)
+# Companies checked directly on every scout run.
+# Add careers_url for all. Add api: when they use Greenhouse.
+# ---------------------------------------------------------------------------
+
+tracked_companies:
+
+  # ==========================================================================
+  # AI / ML — Labs and Platforms
+  # ==========================================================================
+
+  - name: Anthropic
+    careers_url: https://job-boards.greenhouse.io/anthropic
+    api: https://boards-api.greenhouse.io/v1/boards/anthropic/jobs
+    notes: "Claude maker. Strong AI Engineer and research roles."
+    enabled: true
+
+  - name: Cohere
+    careers_url: https://job-boards.greenhouse.io/cohere
+    api: https://boards-api.greenhouse.io/v1/boards/cohere/jobs
+    notes: "Enterprise LLM platform. ML and applied AI roles."
+    enabled: true
+
+  - name: Hugging Face
+    careers_url: https://apply.workable.com/huggingface/
+    scan_method: websearch
+    scan_query: 'site:apply.workable.com/huggingface "engineer" OR "ML" OR "AI"'
+    notes: "Open-source ML hub. Strong new grad culture."
+    enabled: true
+
+  - name: Scale AI
+    careers_url: https://job-boards.greenhouse.io/scaleai
+    api: https://boards-api.greenhouse.io/v1/boards/scaleai/jobs
+    notes: "Data labeling and AI infra. Hires new grads for ML and engineering roles."
+    enabled: true
+
+  - name: Weights & Biases
+    careers_url: https://job-boards.greenhouse.io/wandb
+    api: https://boards-api.greenhouse.io/v1/boards/wandb/jobs
+    notes: "MLOps tooling. Good fit for ML Engineer roles."
+    enabled: true
+
+  - name: Arize AI
+    careers_url: https://job-boards.greenhouse.io/arizeai
+    api: https://boards-api.greenhouse.io/v1/boards/arizeai/jobs
+    notes: "AI observability. Small team, hires engineers with ML system experience."
+    enabled: true
+
+  - name: Langchain
+    careers_url: https://jobs.ashbyhq.com/langchain
+    scan_method: websearch
+    scan_query: 'site:jobs.ashbyhq.com/langchain'
+    notes: "LangChain and LangSmith. Directly relevant to your pipeline work."
+    enabled: true
+
+  - name: Pinecone
+    careers_url: https://job-boards.greenhouse.io/pinecone
+    api: https://boards-api.greenhouse.io/v1/boards/pinecone/jobs
+    notes: "Vector database. ML infra roles, remote-friendly."
+    enabled: true
+
+  # ==========================================================================
+  # AI — Applied / Agentic Products
+  # ==========================================================================
+
+  - name: Sierra
+    careers_url: https://jobs.ashbyhq.com/sierra
+    scan_method: websearch
+    scan_query: 'site:jobs.ashbyhq.com/sierra "engineer" OR "AI"'
+    notes: "AI customer agents. Forward Deployed and AI Engineer roles."
+    enabled: true
+
+  - name: Glean
+    careers_url: https://job-boards.greenhouse.io/gleanwork
+    api: https://boards-api.greenhouse.io/v1/boards/gleanwork/jobs
+    notes: "Enterprise AI search. Solutions Engineer and AI roles."
+    enabled: true
+
+  - name: Temporal
+    careers_url: https://job-boards.greenhouse.io/temporal
+    api: https://boards-api.greenhouse.io/v1/boards/temporal/jobs
+    notes: "Workflow orchestration used in agentic systems."
+    enabled: true
+
+  # ==========================================================================
+  # Embedded / Hardware / Defense-Adjacent
+  # These are Georgia-heavy or remote-friendly embedded employers.
+  # ==========================================================================
+
+  - name: Axon
+    careers_url: https://job-boards.greenhouse.io/axon
+    api: https://boards-api.greenhouse.io/v1/boards/axon/jobs
+    notes: "Public safety tech. Strong embedded firmware and hardware teams."
+    enabled: true
+
+  - name: Joby Aviation
+    careers_url: https://job-boards.greenhouse.io/jobyaviation
+    api: https://boards-api.greenhouse.io/v1/boards/jobyaviation/jobs
+    notes: "eVTOL / aerospace. Embedded systems and controls engineering."
+    enabled: true
+
+  - name: Reliable Robotics
+    careers_url: https://job-boards.greenhouse.io/reliablerobotics
+    api: https://boards-api.greenhouse.io/v1/boards/reliablerobotics/jobs
+    notes: "Autonomous aircraft. Embedded + controls + ML intersection."
+    enabled: true
+
+  - name: Epirus
+    careers_url: https://jobs.lever.co/epirus
+    notes: "Directed energy and defense tech. Embedded firmware and FPGA roles."
+    enabled: true
+
+  - name: Shield AI
+    careers_url: https://job-boards.greenhouse.io/shieldai
+    api: https://boards-api.greenhouse.io/v1/boards/shieldai/jobs
+    notes: "Autonomous defense systems. Embedded, robotics, and AI roles."
+    enabled: true
+
+  - name: Anduril
+    careers_url: https://job-boards.greenhouse.io/andurilindustries
+    api: https://boards-api.greenhouse.io/v1/boards/andurilindustries/jobs
+    notes: "Defense tech. Strong embedded, firmware, FPGA, and AI engineering hiring."
+    enabled: true
+
+  - name: Gecko Robotics
+    careers_url: https://job-boards.greenhouse.io/geckorobotics
+    api: https://boards-api.greenhouse.io/v1/boards/geckorobotics/jobs
+    notes: "Industrial inspection robots. Embedded and robotics engineering."
+    enabled: true
+
+  - name: Sarcos Technology
+    careers_url: https://job-boards.greenhouse.io/sarcos
+    api: https://boards-api.greenhouse.io/v1/boards/sarcos/jobs
+    notes: "Industrial robotics and exoskeletons. Embedded + controls focus."
+    enabled: true
+
+  - name: AST SpaceMobile
+    careers_url: https://ast-science.com/company/careers/
+    scan_method: websearch
+    scan_query: 'site:ast-science.com/careers "engineer" OR "embedded" OR "hardware"'
+    notes: "Satellite comms. You have an existing scraped example from this company."
+    enabled: true
+
+  - name: Textron Systems
+    careers_url: https://jobs.textron.com/
+    scan_method: websearch
+    scan_query: 'site:jobs.textron.com "embedded" OR "firmware" OR "VHDL" OR "FPGA" "entry level" OR "new grad" Atlanta OR Georgia OR remote'
+    notes: "Defense and aviation systems. Georgia presence. Embedded and FPGA roles."
+    enabled: true
+
+  - name: Leidos
+    careers_url: https://careers.leidos.com/
+    scan_method: websearch
+    scan_query: 'site:careers.leidos.com "embedded" OR "firmware" OR "hardware engineer" OR "computer engineer" "entry level" Atlanta OR Georgia OR remote'
+    notes: "Defense / government tech. Georgia offices. Strong new grad pipeline."
+    enabled: true
+
+  - name: SAIC
+    careers_url: https://jobs.saic.com/
+    scan_method: websearch
+    scan_query: 'site:jobs.saic.com "embedded" OR "firmware" OR "AI" "entry level" OR "new grad" Atlanta OR Georgia OR remote'
+    notes: "Defense IT and systems. Georgia presence."
+    enabled: true
+
+  - name: L3Harris
+    careers_url: https://careers.l3harris.com/
+    scan_method: websearch
+    scan_query: 'site:careers.l3harris.com "embedded" OR "FPGA" OR "VHDL" OR "firmware" "entry level" OR "new grad" Georgia OR Atlanta OR remote'
+    notes: "Defense electronics. Strong FPGA and embedded teams."
+    enabled: true
+
+  # ==========================================================================
+  # Georgia-Based Tech Employers
+  # Atlanta tech scene — companies with known engineering hiring in your area.
+  # ==========================================================================
+
+  - name: NCR Voyix
+    careers_url: https://job-boards.greenhouse.io/ncrvoyix
+    api: https://boards-api.greenhouse.io/v1/boards/ncrvoyix/jobs
+    notes: "Atlanta HQ. POS and fintech hardware/software. Embedded + software roles."
+    enabled: true
+
+  - name: Intellicheck
+    careers_url: https://job-boards.greenhouse.io/intellicheck
+    api: https://boards-api.greenhouse.io/v1/boards/intellicheck/jobs
+    notes: "Identity verification tech. Georgia presence."
+    enabled: true
+
+  - name: Cardlytics
+    careers_url: https://job-boards.greenhouse.io/cardlytics
+    api: https://boards-api.greenhouse.io/v1/boards/cardlytics/jobs
+    notes: "Atlanta HQ. Ad analytics platform. ML and data engineering roles."
+    enabled: true
+
+  - name: OneTrust
+    careers_url: https://job-boards.greenhouse.io/onetrust
+    api: https://boards-api.greenhouse.io/v1/boards/onetrust/jobs
+    notes: "Atlanta HQ. Privacy and AI governance platform. Engineering roles."
+    enabled: true
+
+  - name: Ionic Security (Unison)
+    careers_url: https://jobs.lever.co/unisonid
+    notes: "Atlanta-based security and AI. Engineering roles."
+    enabled: false
+
+  - name: Pindrop
+    careers_url: https://job-boards.greenhouse.io/pindrop
+    api: https://boards-api.greenhouse.io/v1/boards/pindrop/jobs
+    notes: "Atlanta HQ. Voice fraud detection. AI + audio signal processing."
+    enabled: true
+
+  - name: Kabbage (American Express)
+    careers_url: https://jobs.lever.co/kabbage
+    notes: "Atlanta-based fintech. Engineering roles."
+    enabled: false
+
+  # ==========================================================================
+  # Robotics / Autonomy (Remote-friendly or expanding)
+  # ==========================================================================
+
+  - name: Boston Dynamics
+    careers_url: https://job-boards.greenhouse.io/bostondynamics
+    api: https://boards-api.greenhouse.io/v1/boards/bostondynamics/jobs
+    notes: "Robotics leader. Embedded, controls, and ML roles."
+    enabled: true
+
+  - name: Figure AI
+    careers_url: https://jobs.ashbyhq.com/figure
+    scan_method: websearch
+    scan_query: 'site:jobs.ashbyhq.com/figure "engineer" OR "embedded" OR "AI" OR "ML"'
+    notes: "Humanoid robots. Embedded + AI intersection."
+    enabled: true
+
+  - name: Apptronik
+    careers_url: https://job-boards.greenhouse.io/apptronik
+    api: https://boards-api.greenhouse.io/v1/boards/apptronik/jobs
+    notes: "Austin-based humanoid robotics. Embedded and controls roles. Remote possible."
+    enabled: true
+
+  - name: Path Robotics
+    careers_url: https://job-boards.greenhouse.io/pathrobotics
+    api: https://boards-api.greenhouse.io/v1/boards/pathrobotics/jobs
+    notes: "Autonomous welding robots. Embedded + computer vision."
+    enabled: true
+
+  # ==========================================================================
+  # General Tech — Remote-Friendly New Grad Programs
+  # Large orgs with structured new grad pipelines and remote options.
+  # ==========================================================================
+
+  - name: Palantir
+    careers_url: https://jobs.lever.co/palantir
+    notes: "Forward Deployed Engineer model. Strong new grad program."
+    enabled: true
+
+  - name: Verkada
+    careers_url: https://job-boards.greenhouse.io/verkada
+    api: https://boards-api.greenhouse.io/v1/boards/verkada/jobs
+    notes: "Physical security + AI. Embedded and ML roles."
+    enabled: true
+
+  - name: Latitude AI (Ford)
+    careers_url: https://job-boards.greenhouse.io/latitude
+    api: https://boards-api.greenhouse.io/v1/boards/latitude/jobs
+    notes: "Autonomous driving. Embedded + ML roles. Ford-backed."
+    enabled: true
+
+  - name: Zoox (Amazon)
+    careers_url: https://job-boards.greenhouse.io/zoox
+    api: https://boards-api.greenhouse.io/v1/boards/zoox/jobs
+    notes: "AV company. Embedded and robotics engineering."
+    enabled: true

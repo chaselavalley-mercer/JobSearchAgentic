@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JobOps</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink:       #0d0e12;
+  --ink2:      #13141a;
+  --ink3:      #1a1b23;
+  --line:      #22232e;
+  --line2:     #2d2e3d;
+  --fog:       #454660;
+  --mist:      #6b6c8a;
+  --text:      #c4c5d6;
+  --bright:    #eeeef5;
+  --lime:      #b8f566;
+  --lime-lo:   rgba(184,245,102,0.08);
+  --lime-mid:  rgba(184,245,102,0.18);
+  --amber:     #f5a623;
+  --amber-lo:  rgba(245,166,35,0.08);
+  --rose:      #f56666;
+  --rose-lo:   rgba(245,102,102,0.08);
+  --sky:       #66c2f5;
+  --sky-lo:    rgba(102,194,245,0.08);
+  --violet:    #9b8bff;
+  --violet-lo: rgba(155,139,255,0.10);
+  --r: 4px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;overflow:hidden;}
+body{background:var(--ink);color:var(--text);font-family:'DM Mono',monospace;font-size:12.5px;display:flex;flex-direction:column;}
+
+/* noise */
+body::after{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");pointer-events:none;z-index:9999;opacity:0.5;}
+
+/* HEADER */
+header{display:flex;align-items:center;height:52px;border-bottom:1px solid var(--line);flex-shrink:0;background:var(--ink2);}
+.logo-block{padding:0 22px;height:100%;display:flex;align-items:center;border-right:1px solid var(--line);gap:10px;}
+.logo-text{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:0.12em;color:var(--bright);}
+.logo-sub{font-size:9px;color:var(--mist);letter-spacing:0.1em;}
+.api-dot{width:6px;height:6px;border-radius:50%;background:var(--lime);box-shadow:0 0 8px var(--lime);animation:blink 2.5s ease-in-out infinite;flex-shrink:0;}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:0.25;}}
+.header-stats{display:flex;align-items:stretch;height:100%;margin-left:auto;}
+.stat-cell{display:flex;flex-direction:column;justify-content:center;align-items:center;padding:0 18px;border-left:1px solid var(--line);min-width:72px;}
+.stat-val{font-family:'Manrope',sans-serif;font-weight:800;font-size:17px;line-height:1;margin-bottom:2px;}
+.stat-val.lime{color:var(--lime);}.stat-val.amber{color:var(--amber);}.stat-val.mist{color:var(--mist);}.stat-val.bright{color:var(--bright);}
+.stat-key{font-size:9px;color:var(--fog);letter-spacing:0.12em;text-transform:uppercase;}
+
+/* WORKSPACE */
+.workspace{display:grid;grid-template-columns:330px 1fr;flex:1;overflow:hidden;}
+
+/* CMD PANEL */
+.cmd-panel{border-right:1px solid var(--line);display:flex;flex-direction:column;background:var(--ink2);overflow:hidden;}
+.sec-hdr{padding:11px 18px;font-size:9px;letter-spacing:0.18em;text-transform:uppercase;color:var(--fog);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:7px;}
+.sec-hdr .ac{color:var(--lime);}
+.cmd-form{padding:16px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:11px;}
+.flabel{font-size:9px;color:var(--mist);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:4px;display:block;}
+.fctl{width:100%;background:var(--ink3);border:1px solid var(--line2);border-radius:var(--r);color:var(--text);font-family:'DM Mono',monospace;font-size:12px;padding:8px 11px;outline:none;transition:border-color .15s,box-shadow .15s;}
+.fctl:focus{border-color:var(--violet);box-shadow:0 0 0 3px var(--violet-lo);}
+select.fctl{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%236b6c8a'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 11px center;}
+textarea.fctl{resize:none;line-height:1.5;}
+textarea.fctl::placeholder{color:var(--fog);}
+.run-btn{width:100%;padding:11px;background:var(--lime);border:none;border-radius:var(--r);color:#0a0f04;font-family:'Manrope',sans-serif;font-weight:800;font-size:12px;letter-spacing:0.08em;text-transform:uppercase;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:7px;}
+.run-btn:hover{background:#ceff7a;box-shadow:0 0 22px rgba(184,245,102,.35);transform:translateY(-1px);}
+.run-btn:active{transform:none;box-shadow:none;}
+.run-btn.busy{background:var(--line2);color:var(--fog);cursor:not-allowed;pointer-events:none;box-shadow:none;transform:none;}
+
+/* TERMINAL */
+.term-wrap{flex:1;overflow:hidden;display:flex;flex-direction:column;}
+.term-body{flex:1;overflow-y:auto;padding:13px 17px;font-size:11.5px;line-height:1.7;display:flex;flex-direction:column;gap:1px;}
+.tl{display:flex;gap:8px;animation:tIn .1s ease;}
+@keyframes tIn{from{opacity:0;transform:translateY(1px);}to{opacity:1;transform:none;}}
+.tp{color:var(--lime);flex-shrink:0;opacity:.6;}
+.tl.ok .tt{color:var(--lime);}.tl.err .tt{color:var(--rose);}.tl.info .tt{color:var(--sky);}.tl.dim .tt{color:var(--fog);}
+.tblank{height:5px;}
+.tcopy{margin:5px 0 2px;background:var(--violet-lo);border:1px solid rgba(155,139,255,.2);border-radius:var(--r);padding:9px 11px;display:flex;align-items:center;justify-content:space-between;gap:8px;cursor:pointer;transition:border-color .15s;}
+.tcopy:hover{border-color:var(--violet);}
+.tcopy code{color:var(--violet);font-size:11px;font-family:'DM Mono',monospace;word-break:break-all;}
+.tcopy-hint{font-size:9px;color:var(--mist);flex-shrink:0;}
+.t-empty{color:var(--fog);font-size:11px;text-align:center;padding:36px 16px;line-height:2;}
+
+/* JOBS PANEL */
+.jobs-panel{display:flex;flex-direction:column;overflow:hidden;position:relative;}
+.toolbar{padding:9px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:9px;background:var(--ink2);flex-shrink:0;flex-wrap:wrap;}
+.sbox{flex:1;min-width:150px;background:var(--ink3);border:1px solid var(--line2);border-radius:var(--r);color:var(--text);font-family:'DM Mono',monospace;font-size:12px;padding:7px 11px;outline:none;transition:border-color .15s;}
+.sbox:focus{border-color:var(--violet);}
+.sbox::placeholder{color:var(--fog);}
+.tbs{background:var(--ink3);border:1px solid var(--line2);border-radius:var(--r);color:var(--text);font-family:'DM Mono',monospace;font-size:11px;padding:7px 24px 7px 9px;outline:none;cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5'%3E%3Cpath d='M0 0l4 5 4-5z' fill='%236b6c8a'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 7px center;transition:border-color .15s;}
+.tbs:focus{border-color:var(--violet);}
+.tbcount{margin-left:auto;font-size:10px;color:var(--fog);white-space:nowrap;}
+.tbcount b{color:var(--lime);font-weight:500;}
+.job-scroll{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:7px;}
+
+/* JOB CARD */
+.jcard{background:var(--ink2);border:1px solid var(--line);border-radius:6px;padding:13px 15px;cursor:pointer;transition:border-color .15s,transform .15s,box-shadow .15s;position:relative;animation:cIn .2s ease both;}
+@keyframes cIn{from{opacity:0;transform:translateY(3px);}to{opacity:1;transform:none;}}
+.jcard::after{content:'';position:absolute;left:0;top:11px;bottom:11px;width:2px;border-radius:0 2px 2px 0;}
+.jcard.apply::after{background:var(--lime);}.jcard.review::after{background:var(--amber);}.jcard.skip::after{background:var(--fog);}
+.jcard:hover{border-color:var(--line2);transform:translateX(3px);box-shadow:4px 0 20px rgba(0,0,0,.35);}
+.jcard-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:9px;}
+.jcard-title{font-family:'Manrope',sans-serif;font-weight:700;font-size:13px;color:var(--bright);line-height:1.25;}
+.jcard-co{font-size:11px;color:var(--mist);margin-top:2px;}
+.score-stack{text-align:right;flex-shrink:0;}
+.score-big{font-family:'Manrope',sans-serif;font-weight:800;font-size:22px;line-height:1;letter-spacing:-.5px;}
+.score-big.apply{color:var(--lime);}.score-big.review{color:var(--amber);}.score-big.skip{color:var(--mist);}
+.grade-txt{font-size:9px;font-weight:700;letter-spacing:.12em;margin-top:1px;}
+.grade-txt.apply{color:var(--lime);}.grade-txt.review{color:var(--amber);}.grade-txt.skip{color:var(--fog);}
+.jcard-tags{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:9px;}
+.tag{font-size:9.5px;padding:2px 8px;border-radius:100px;border:1px solid var(--line2);color:var(--mist);}
+.tag.loc{color:var(--sky);border-color:rgba(102,194,245,.18);background:var(--sky-lo);}
+.tag.pay{color:var(--lime);border-color:rgba(184,245,102,.18);background:var(--lime-lo);}
+.tag.arr{color:var(--violet);border-color:rgba(155,139,255,.18);background:var(--violet-lo);}
+.rec-chip{font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:2px 8px;border-radius:100px;}
+.rec-chip.apply{background:var(--lime-mid);color:var(--lime);border:1px solid rgba(184,245,102,.3);}
+.rec-chip.review{background:var(--amber-lo);color:var(--amber);border:1px solid rgba(245,166,35,.25);}
+.rec-chip.skip{background:var(--line);color:var(--fog);border:1px solid var(--line2);}
+.mini-bars{display:grid;grid-template-columns:1fr 1fr;gap:3px 12px;}
+.mbar{display:flex;align-items:center;gap:5px;}
+.mbar-name{font-size:9px;color:var(--fog);width:54px;flex-shrink:0;text-transform:uppercase;letter-spacing:.04em;}
+.mbar-track{flex:1;height:2px;background:var(--line2);border-radius:1px;overflow:hidden;}
+.mbar-fill{height:100%;border-radius:1px;transition:width .5s cubic-bezier(.4,0,.2,1);}
+.mbar-val{font-size:9px;color:var(--fog);width:10px;text-align:right;}
+.card-gaps{margin-top:8px;padding-top:8px;border-top:1px solid var(--line);display:flex;flex-wrap:wrap;gap:4px;}
+.gap-pill{font-size:9px;padding:2px 7px;border-radius:100px;background:var(--rose-lo);border:1px solid rgba(245,102,102,.15);color:var(--rose);}
+.empty-jobs{text-align:center;padding:60px 20px;color:var(--fog);line-height:2;}
+.empty-jobs .sym{font-size:32px;display:block;margin-bottom:8px;opacity:.4;}
+
+/* DRAWER */
+.d-overlay{position:fixed;inset:0;background:rgba(13,14,18,.75);backdrop-filter:blur(5px);z-index:200;opacity:0;pointer-events:none;transition:opacity .25s;}
+.d-overlay.open{opacity:1;pointer-events:all;}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(740px,92vw);background:var(--ink2);border-left:1px solid var(--line2);z-index:300;overflow-y:auto;transform:translateX(100%);transition:transform .28s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column;}
+.drawer.open{transform:translateX(0);}
+.d-hdr{padding:22px 26px 18px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--ink2);z-index:10;display:flex;align-items:flex-start;gap:14px;}
+.d-close{margin-left:auto;background:var(--ink3);border:1px solid var(--line2);border-radius:var(--r);color:var(--mist);font-family:'DM Mono',monospace;font-size:11px;padding:6px 11px;cursor:pointer;transition:all .15s;flex-shrink:0;}
+.d-close:hover{border-color:var(--rose);color:var(--rose);}
+.d-title-block{flex:1;}
+.d-role{font-family:'Manrope',sans-serif;font-weight:800;font-size:20px;color:var(--bright);line-height:1.2;margin-bottom:3px;}
+.d-co{font-size:12px;color:var(--mist);}
+.d-score-hero{text-align:right;flex-shrink:0;}
+.hero-num{font-family:'Manrope',sans-serif;font-weight:800;font-size:44px;line-height:1;letter-spacing:-2px;}
+.hero-num.apply{color:var(--lime);}.hero-num.review{color:var(--amber);}.hero-num.skip{color:var(--mist);}
+.hero-grade{font-size:10px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;margin-top:2px;}
+.hero-grade.apply{color:var(--lime);}.hero-grade.review{color:var(--amber);}.hero-grade.skip{color:var(--mist);}
+
+.d-body{padding:22px 26px;display:flex;flex-direction:column;gap:26px;}
+.d-sec-title{font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--fog);margin-bottom:11px;display:flex;align-items:center;gap:8px;}
+.d-sec-title::after{content:'';flex:1;height:1px;background:var(--line);}
+
+.meta-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;}
+.mc{background:var(--ink3);border:1px solid var(--line);border-radius:var(--r);padding:11px 13px;}
+.mc-key{font-size:9px;color:var(--fog);letter-spacing:.1em;text-transform:uppercase;margin-bottom:3px;}
+.mc-val{font-size:12.5px;color:var(--bright);font-weight:500;}
+.mc-val.null{color:var(--fog);font-style:italic;}
+
+.gates{display:flex;flex-direction:column;gap:5px;}
+.gate-row{display:flex;align-items:flex-start;gap:9px;padding:9px 13px;background:var(--ink3);border:1px solid var(--line);border-radius:var(--r);}
+.gate-icon{font-size:12px;flex-shrink:0;margin-top:1px;}
+.gate-name{font-size:11px;font-weight:500;margin-bottom:1px;}
+.gate-reason{font-size:11px;color:var(--mist);line-height:1.4;}
+
+.dim-list{display:flex;flex-direction:column;gap:6px;}
+.dim-row{display:grid;grid-template-columns:110px 36px 1fr 180px;align-items:center;gap:11px;padding:9px 13px;background:var(--ink3);border:1px solid var(--line);border-radius:var(--r);}
+.dim-name{font-size:11px;color:var(--bright);text-transform:capitalize;font-weight:500;}
+.dim-score{font-family:'Manrope',sans-serif;font-weight:800;font-size:17px;text-align:center;}
+.dim-bar-track{height:3px;background:var(--line2);border-radius:2px;overflow:hidden;}
+.dim-bar-fill{height:100%;border-radius:2px;transition:width .6s cubic-bezier(.4,0,.2,1);}
+.dim-wt{font-size:9px;color:var(--fog);margin-top:3px;}
+.dim-reason{font-size:10.5px;color:var(--mist);line-height:1.4;}
+
+.benefits-wrap{display:flex;flex-wrap:wrap;gap:5px;}
+.btag{font-size:10px;padding:3px 9px;background:var(--lime-lo);border:1px solid rgba(184,245,102,.2);border-radius:100px;color:var(--lime);}
+
+.gaps-list{display:flex;flex-direction:column;gap:5px;}
+.gap-item{display:flex;align-items:flex-start;gap:9px;padding:9px 13px;background:var(--rose-lo);border:1px solid rgba(245,102,102,.12);border-radius:var(--r);font-size:12px;color:var(--text);line-height:1.4;}
+.gap-item::before{content:'△';color:var(--rose);font-size:10px;flex-shrink:0;margin-top:1px;}
+
+.resp-list{display:flex;flex-direction:column;gap:0;}
+.resp-item{display:flex;gap:8px;font-size:11.5px;color:var(--text);line-height:1.5;padding:6px 0;border-bottom:1px solid var(--line);}
+.resp-item:last-child{border-bottom:none;}
+.resp-item::before{content:'—';color:var(--fog);flex-shrink:0;}
+
+.qual-cols{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.qual-block-title{font-size:10px;color:var(--mist);letter-spacing:.08em;margin-bottom:7px;text-transform:uppercase;}
+.qual-item{font-size:11px;color:var(--text);line-height:1.5;padding:5px 0;border-bottom:1px solid var(--line);display:flex;gap:7px;}
+.qual-item:last-child{border-bottom:none;}
+.qual-item::before{content:'·';color:var(--fog);flex-shrink:0;}
+
+.d-actions{position:sticky;bottom:0;background:var(--ink2);border-top:1px solid var(--line);padding:14px 26px;display:flex;gap:9px;}
+.abtn{flex:1;padding:10px;border-radius:var(--r);font-family:'Manrope',sans-serif;font-weight:700;font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;border:1px solid transparent;transition:all .15s;}
+.abtn.primary{background:var(--lime);color:#0a0f04;}
+.abtn.primary:hover{background:#ceff7a;box-shadow:0 0 18px rgba(184,245,102,.3);}
+.abtn.sec{background:transparent;border-color:var(--line2);color:var(--mist);}
+.abtn.sec:hover{border-color:var(--violet);color:var(--violet);}
+
+::-webkit-scrollbar{width:3px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--line2);border-radius:2px;}
+
+/* Score color helpers */
+.sc5,.sc4{color:var(--lime);}.sc3{color:var(--amber);}.sc2,.sc1{color:var(--rose);}.scn{color:var(--fog);}
+.bf5{background:var(--lime);width:100%;}
+.bf4{background:var(--lime);width:80%;opacity:.75;}
+.bf3{background:var(--amber);width:60%;}
+.bf2{background:var(--rose);width:40%;opacity:.8;}
+.bf1{background:var(--rose);width:20%;}
+.bf0{background:var(--fog);width:2%;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo-block">
+    <div class="api-dot" id="apiDot"></div>
+    <div>
+      <div class="logo-text">JOBOPS</div>
+      <div class="logo-sub">chase_lavalley</div>
+    </div>
+  </div>
+  <div class="header-stats">
+    <div class="stat-cell"><div class="stat-val bright" id="sTotal">—</div><div class="stat-key">evaluated</div></div>
+    <div class="stat-cell"><div class="stat-val lime"   id="sApply">—</div><div class="stat-key">apply</div></div>
+    <div class="stat-cell"><div class="stat-val amber"  id="sReview">—</div><div class="stat-key">review</div></div>
+    <div class="stat-cell"><div class="stat-val mist"   id="sSkip">—</div><div class="stat-key">skip</div></div>
+    <div class="stat-cell"><div class="stat-val bright" id="sAvg">—</div><div class="stat-key">avg score</div></div>
+  </div>
+</header>
+
+<div class="workspace">
+  <!-- CMD PANEL -->
+  <div class="cmd-panel">
+    <div class="sec-hdr"><span class="ac">▸</span> Command Center</div>
+    <div class="cmd-form">
+      <div>
+        <label class="flabel">Mode</label>
+        <select class="fctl" id="cmdMode">
+          <option value="/evaluate">/evaluate — score job posting</option>
+          <option value="/apply">/apply — full pipeline + resume</option>
+        </select>
+      </div>
+      <div>
+        <label class="flabel">Job URL</label>
+        <textarea class="fctl" id="urlInput" rows="3" placeholder="https://boards.greenhouse.io/..."></textarea>
+      </div>
+      <button class="run-btn" id="runBtn" onclick="runCmd()">
+        <span id="runIcon">▶</span><span id="runLabel">Run Command</span>
+      </button>
+    </div>
+    <div class="sec-hdr"><span class="ac">$</span> Terminal</div>
+    <div class="term-wrap">
+      <div class="term-body" id="terminal">
+        <div class="t-empty">// awaiting command<br>select mode · paste url · run</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- JOBS PANEL -->
+  <div class="jobs-panel">
+    <div class="toolbar">
+      <input class="sbox" id="searchBox" placeholder="search title, company, location..." oninput="filter()">
+      <select class="tbs" id="sortBy" onchange="filter()">
+        <option value="score">Best Match</option>
+        <option value="recent">Most Recent</option>
+      </select>
+      <select class="tbs" id="recF" onchange="filter()">
+        <option value="all">All Results</option>
+        <option value="APPLY">Apply Only</option>
+        <option value="REVIEW">Review Only</option>
+        <option value="SKIP">Skip Only</option>
+      </select>
+      <select class="tbs" id="gradeF" onchange="filter()">
+        <option value="all">All Grades</option>
+        <option value="A">A (4.5+)</option>
+        <option value="B">B+ (4.0+)</option>
+        <option value="C">C+ (3.0+)</option>
+      </select>
+      <div class="tbcount">Showing <b id="jobCount">0</b> jobs</div>
+    </div>
+    <div class="job-scroll" id="jobScroll">
+      <div class="empty-jobs"><span class="sym">◈</span>No evaluations yet.<br>Run <strong>/evaluate</strong> on a URL to begin.</div>
+    </div>
+  </div>
+</div>
+
+<!-- DRAWER -->
+<div class="d-overlay" id="overlay" onclick="closeDrawer()"></div>
+<div class="drawer" id="drawer">
+  <div class="d-hdr">
+    <div class="d-title-block">
+      <div class="d-role" id="dRole">—</div>
+      <div class="d-co" id="dCo">—</div>
+    </div>
+    <div class="d-score-hero">
+      <div class="hero-num" id="dScore">—</div>
+      <div class="hero-grade" id="dGrade">—</div>
+    </div>
+    <button class="d-close" onclick="closeDrawer()">✕ close</button>
+  </div>
+  <div class="d-body" id="dBody"></div>
+  <div class="d-actions">
+    <button class="abtn primary" id="applyBtn" onclick="copyApply()">▶ Copy /apply Command</button>
+    <button class="abtn sec" onclick="openUrl()">↗ Open Job URL</button>
+    <button class="abtn sec" onclick="closeDrawer()">✕ Dismiss</button>
+  </div>
+</div>
+
+<script>
+const API = 'http://localhost:5050/api';
+let allJobs = [], activeJob = null;
+
+const MOCK = [{
+  job_id:"capco_junior_ai_engineer_orlando_fl",
+  title:"Junior AI Engineer",company:"Capco",
+  location:"Orlando, FL",url:"https://job-boards.greenhouse.io/capco/jobs/7526111",
+  experience_level:"Entry-level / Junior",pay_salary:null,
+  work_arrangement:"Hybrid",application_count:null,
+  benefits:["medical","dental","vision","401k","tuition_reimbursement"],
+  posted_date:null,gate_passed:true,
+  gate_details:{
+    fits_experience:{passed:true,reason:"Junior role, no explicit years floor"},
+    fits_role_type:{passed:true,reason:"Junior AI Engineer — agentic, MCP, RAG"},
+    posted_recently:{passed:true,reason:"No post date found — gate not failed on absent data"}
+  },
+  null_fields:["pay_salary","application_count"],
+  scores:{
+    role_substance:{score:4,weight:0.2976,reason:"Real agentic engineering: LangChain, MCP, RAG, MLOps"},
+    keyword_match:{score:3,weight:0.2381,reason:"Python ✓ PyTorch ✓ — gaps: LangChain, React, vector DBs"},
+    growth_signal:{score:4,weight:0.1786,reason:"Explicit mentorship, code reviews, 'promoted quickly' stated"},
+    compensation:{score:null,weight:0,reason:"OMITTED — pay_salary null"},
+    benefits:{score:4,weight:0.1190,reason:"Medical, dental, vision, 401k, tuition — matching unconfirmed"},
+    location_fit:{score:4,weight:0.1429,reason:"Orlando FL — Florida non-Atlanta = 4"},
+    application_count:{score:null,weight:0,reason:"OMITTED — application_count null"},
+    work_arrangement:{score:4,weight:0.0238,reason:"Hybrid confirmed via #LI-HYBRID"}
+  },
+  composite_score:3.76,grade:"C",recommendation:"REVIEW",
+  evaluated_at:"2026-04-09T22:31:00Z",
+  gaps:["LangChain/AutoGen absent from profile","React/JS front-end not listed","No vector DB / RAG experience","Orlando not primary target (Atlanta preferred)","Salary undisclosed"],
+  analysis_payload:{
+    core_responsibilities:["Design apps using foundation models (LLMs, multimodal)","Experiment with RAG and prompt engineering","Build AI agents using LangChain, AutoGen, Semantic Kernel","Develop MCP integrations for AI systems","Support full-stack AI apps (React/Flask/FastAPI)","Build and test RESTful APIs and microservices","Deploy and monitor AI/ML workloads on AWS/Azure/GCP","Implement MLOps and DevOps best practices","Collaborate with engineers, data scientists, PMs"],
+    basic_qualifications:["Bachelor's in CS, AI, Data Science, or equivalent","Strong Python + ML/AI framework (PyTorch, TensorFlow, HuggingFace)","Experience with LLMs, generative AI technologies","Basic understanding of APIs, cloud computing, Git, CI/CD"],
+    preferred_qualifications:["Modern web frameworks or front-end technologies","Curiosity for LangChain, AutoGen, emerging AI tools","Internship or project experience with AI/ML","Understanding of data pipelines, vector databases, RAG","Experience with GitHub Copilot, OpenAI API, or AI SDKs"]
+  }
+}];
+
+// ── API ──
+async function fetchJobs(){
+  try{
+    const r=await fetch(`${API}/jobs`);
+    if(!r.ok)throw new Error();
+    const d=await r.json();
+    allJobs=d.jobs||[];
+    setDot(true);
+  }catch{allJobs=MOCK;setDot(false);}
+  filter();loadStats();
+}
+
+async function loadStats(){
+  try{
+    const r=await fetch(`${API}/stats`);
+    if(!r.ok)throw new Error();
+    const s=await r.json();
+    document.getElementById('sTotal').textContent=s.total??'—';
+    document.getElementById('sApply').textContent=s.apply??'—';
+    document.getElementById('sReview').textContent=s.review??'—';
+    document.getElementById('sSkip').textContent=s.skip??'—';
+    document.getElementById('sAvg').textContent=s.avg_score??'—';
+  }catch{
+    const j=allJobs;
+    document.getElementById('sTotal').textContent=j.length;
+    document.getElementById('sApply').textContent=j.filter(x=>x.recommendation==='APPLY').length;
+    document.getElementById('sReview').textContent=j.filter(x=>x.recommendation==='REVIEW').length;
+    document.getElementById('sSkip').textContent=j.filter(x=>x.recommendation==='SKIP').length;
+    const avg=j.length?(j.reduce((a,b)=>a+(b.composite_score||0),0)/j.length).toFixed(2):'—';
+    document.getElementById('sAvg').textContent=avg;
+  }
+}
+
+function setDot(on){
+  const d=document.getElementById('apiDot');
+  d.style.background=on?'var(--lime)':'var(--rose)';
+  d.style.boxShadow=on?'0 0 8px var(--lime)':'0 0 8px var(--rose)';
+}
+
+// ── TERMINAL ──
+function tlog(text,cls=''){
+  const t=document.getElementById('terminal');
+  const e=t.querySelector('.t-empty');if(e)e.remove();
+  const d=document.createElement('div');
+  if(text===''){d.className='tblank';}
+  else{d.className=`tl ${cls}`;d.innerHTML=`<span class="tp">›</span><span class="tt">${text}</span>`;}
+  t.appendChild(d);t.scrollTop=t.scrollHeight;
+}
+function tbox(cmd){
+  const t=document.getElementById('terminal');
+  const b=document.createElement('div');
+  b.className='tcopy';
+  b.innerHTML=`<code>${cmd}</code><span class="tcopy-hint">click to copy</span>`;
+  b.onclick=()=>{
+    navigator.clipboard.writeText(cmd);
+    b.style.borderColor='rgba(184,245,102,.4)';
+    b.querySelector('.tcopy-hint').textContent='✓ copied';
+    setTimeout(()=>{b.style.borderColor='';b.querySelector('.tcopy-hint').textContent='click to copy';},2000);
+  };
+  t.appendChild(b);t.scrollTop=t.scrollHeight;
+}
+
+// ── RUN ──
+async function runCmd(){
+  const mode=document.getElementById('cmdMode').value;
+  const url=document.getElementById('urlInput').value.trim();
+  const btn=document.getElementById('runBtn');
+
+  if(!url){tlog('ERROR: no URL provided','err');return;}
+  if(!url.startsWith('http')){tlog('ERROR: invalid URL','err');return;}
+
+  btn.classList.add('busy');
+  document.getElementById('runIcon').textContent='◌';
+  document.getElementById('runLabel').textContent='running...';
+
+  tlog('');
+  tlog(`── ${mode} ──`,'info');
+  tlog(`url  : ${url.slice(0,52)}...`,'dim');
+  tlog(`user : chase_lavalley`,'dim');
+  tlog('');
+
+  try {
+    const resp = await fetch('http://localhost:5050/api/run', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({command: mode, url: url})
+    });
+
+    if(!resp.ok){
+      const err = await resp.json();
+      tlog(`ERROR: ${err.error||'API error'}`, 'err');
+      return;
+    }
+
+    // Stream output line by line
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while(true){
+      const {done, value} = await reader.read();
+      if(done) break;
+      buffer += decoder.decode(value, {stream: true});
+      const lines = buffer.split('\n');
+      buffer = lines.pop(); // keep incomplete line
+      for(const line of lines){
+        if(line.startsWith('[EXIT 0]')){
+          tlog('');
+          tlog('✓ pipeline complete', 'ok');
+        } else if(line.startsWith('[EXIT')){
+          tlog(`${line}`, 'err');
+        } else if(line.startsWith('[ERROR]')){
+          tlog(line, 'err');
+        } else if(line.trim()){
+          tlog(line.trim(), 'dim');
+        }
+      }
+    }
+
+    // Re-fetch jobs after completion
+    setTimeout(()=>{ fetchJobs(); loadStats(); }, 1000);
+
+  } catch(e) {
+    tlog('ERROR: API not reachable — is api.py running?', 'err');
+    tlog('Run: python api.py', 'dim');
+  } finally {
+    btn.classList.remove('busy');
+    document.getElementById('runIcon').textContent='▶';
+    document.getElementById('runLabel').textContent='Run Command';
+  }
+}
+
+// ── FILTER ──
+function filter(){
+  const q=document.getElementById('searchBox').value.toLowerCase();
+  const sort=document.getElementById('sortBy').value;
+  const rec=document.getElementById('recF').value;
+  const grade=document.getElementById('gradeF').value;
+  let jobs=[...allJobs];
+  if(q)jobs=jobs.filter(j=>(j.title||'').toLowerCase().includes(q)||(j.company||'').toLowerCase().includes(q)||(j.location||'').toLowerCase().includes(q));
+  if(rec!=='all')jobs=jobs.filter(j=>j.recommendation===rec);
+  if(grade==='A')jobs=jobs.filter(j=>j.composite_score>=4.5);
+  if(grade==='B')jobs=jobs.filter(j=>j.composite_score>=4.0);
+  if(grade==='C')jobs=jobs.filter(j=>j.composite_score>=3.0);
+  if(sort==='score')jobs.sort((a,b)=>b.composite_score-a.composite_score);
+  if(sort==='recent')jobs.sort((a,b)=>new Date(b.evaluated_at)-new Date(a.evaluated_at));
+  document.getElementById('jobCount').textContent=jobs.length;
+  renderJobs(jobs);
+}
+
+// ── HELPERS ──
+function rc(r){return(r||'skip').toLowerCase();}
+function sc(s){if(s>=4)return'apply';if(s>=3)return'review';return'skip';}
+function scCls(s){if(s===null||s===undefined)return'scn';if(s>=4)return'sc5';if(s>=3)return'sc3';return'sc2';}
+function bfCls(s){if(s===null||s===undefined)return'bf0';return`bf${Math.round(s)}`;}
+
+// ── RENDER CARDS ──
+function renderJobs(jobs){
+  const el=document.getElementById('jobScroll');
+  if(!jobs.length){el.innerHTML=`<div class="empty-jobs"><span class="sym">◈</span>No jobs match your filters.</div>`;return;}
+  const dims=[['role','role_substance'],['kw','keyword_match'],['growth','growth_signal'],['loc','location_fit'],['ben','benefits'],['arr','work_arrangement']];
+  el.innerHTML=jobs.map((j,i)=>{
+    const recC=rc(j.recommendation),scC=sc(j.composite_score),scores=j.scores||{};
+    const bars=dims.map(([l,k])=>{const s=scores[k]?.score;return`<div class="mbar"><div class="mbar-name">${l}</div><div class="mbar-track"><div class="mbar-fill ${bfCls(s)}"></div></div><div class="mbar-val">${s??'—'}</div></div>`;}).join('');
+    const gaps=(j.gaps||[]).slice(0,3).map(g=>`<span class="gap-pill">${g}</span>`).join('');
+    const payTag=j.pay_salary?`<span class="tag pay">${j.pay_salary}</span>`:`<span class="tag">pay undisclosed</span>`;
+    return`<div class="jcard ${recC}" style="animation-delay:${i*.04}s" onclick="openJob('${j.job_id}')">
+      <div class="jcard-top">
+        <div><div class="jcard-title">${j.title}</div><div class="jcard-co">${j.company}</div></div>
+        <div class="score-stack"><div class="score-big ${scC}">${(j.composite_score||0).toFixed(2)}</div><div class="grade-txt ${scC}">${j.grade||'—'}</div></div>
+      </div>
+      <div class="jcard-tags">
+        <span class="tag loc">◎ ${j.location||'unknown'}</span>${payTag}
+        ${j.work_arrangement?`<span class="tag arr">${j.work_arrangement}</span>`:''}
+        <span class="rec-chip ${recC}">${j.recommendation||'SKIP'}</span>
+      </div>
+      <div class="mini-bars">${bars}</div>
+      ${gaps?`<div class="card-gaps">${gaps}</div>`:''}
+    </div>`;
+  }).join('');
+}
+
+// ── DRAWER ──
+function openJob(id){
+  const job=allJobs.find(j=>j.job_id===id);if(!job)return;
+  activeJob=job;
+  const recC=rc(job.recommendation),scC=sc(job.composite_score);
+  document.getElementById('dRole').textContent=job.title;
+  document.getElementById('dCo').textContent=job.company;
+  document.getElementById('dScore').className=`hero-num ${scC}`;
+  document.getElementById('dScore').textContent=(job.composite_score||0).toFixed(2);
+  document.getElementById('dGrade').className=`hero-grade ${scC}`;
+  document.getElementById('dGrade').textContent=`Grade ${job.grade||'—'} — ${job.recommendation||'SKIP'}`;
+  document.getElementById('dBody').innerHTML=buildBody(job);
+  document.getElementById('overlay').classList.add('open');
+  document.getElementById('drawer').classList.add('open');
+}
+function closeDrawer(){
+  document.getElementById('overlay').classList.remove('open');
+  document.getElementById('drawer').classList.remove('open');
+  activeJob=null;
+}
+function openUrl(){if(activeJob?.url)window.open(activeJob.url,'_blank');}
+function copyApply(){
+  if(!activeJob)return;
+  navigator.clipboard.writeText(`/apply ${activeJob.url}`);
+  const b=document.getElementById('applyBtn');
+  b.textContent='✓ Copied!';
+  setTimeout(()=>{b.textContent='▶ Copy /apply Command';},2000);
+}
+
+function buildBody(j){
+  const scores=j.scores||{},gates=j.gate_details||{},payload=j.analysis_payload||{};
+  const benefits=Array.isArray(j.benefits)?j.benefits:[],gaps=j.gaps||[],nulls=j.null_fields||[];
+
+  // Meta
+  const meta=`<div>
+    <div class="d-sec-title">Job Details</div>
+    <div class="meta-grid">
+      <div class="mc"><div class="mc-key">Location</div><div class="mc-val">${j.location||'—'}</div></div>
+      <div class="mc"><div class="mc-key">Work Arrangement</div><div class="mc-val ${j.work_arrangement?'':'null'}">${j.work_arrangement||'Not listed'}</div></div>
+      <div class="mc"><div class="mc-key">Compensation</div><div class="mc-val ${j.pay_salary?'':'null'}">${j.pay_salary||'Not disclosed'}</div></div>
+      <div class="mc"><div class="mc-key">Experience Level</div><div class="mc-val">${j.experience_level||'—'}</div></div>
+      <div class="mc"><div class="mc-key">Application Count</div><div class="mc-val ${j.application_count===null?'null':''}">${j.application_count??'Not found'}</div></div>
+      <div class="mc"><div class="mc-key">Evaluated</div><div class="mc-val">${j.evaluated_at?new Date(j.evaluated_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}):'—'}</div></div>
+    </div></div>`;
+
+  // Gates
+  const gateRows=Object.entries(gates).map(([k,g])=>`
+    <div class="gate-row">
+      <div class="gate-icon" style="color:${g.passed?'var(--lime)':'var(--rose)'}">${g.passed?'✓':'✗'}</div>
+      <div><div class="gate-name" style="color:${g.passed?'var(--lime)':'var(--rose)'}">${k.replace(/_/g,' ')}</div>
+      <div class="gate-reason">${g.reason||'—'}</div></div>
+    </div>`).join('');
+  const gatesSec=`<div><div class="d-sec-title">Gate-Pass Checks</div><div class="gates">${gateRows}</div></div>`;
+
+  // Dims
+  const dimOrder=['role_substance','keyword_match','growth_signal','compensation','benefits','location_fit','application_count','work_arrangement'];
+  const dimRows=dimOrder.map(k=>{
+    const d=scores[k];if(!d)return'';
+    const isNull=d.score===null||d.score===undefined;
+    return`<div class="dim-row">
+      <div class="dim-name">${k.replace(/_/g,' ')}</div>
+      <div class="dim-score ${isNull?'scn':scCls(d.score)}">${isNull?'N/A':d.score}</div>
+      <div><div class="dim-bar-track"><div class="dim-bar-fill ${isNull?'bf0':bfCls(d.score)}"></div></div>
+      <div class="dim-wt">${isNull?'omitted':`weight ${(d.weight*100).toFixed(0)}%`}</div></div>
+      <div class="dim-reason">${d.reason||'—'}</div>
+    </div>`;
+  }).join('');
+  const dimsSec=`<div><div class="d-sec-title">Dimension Scores</div><div class="dim-list">${dimRows}</div>
+    ${nulls.length?`<div style="margin-top:7px;font-size:10px;color:var(--fog)">Omitted (null): ${nulls.join(', ')}</div>`:''}</div>`;
+
+  // Gaps
+  const gapsSec=gaps.length?`<div><div class="d-sec-title">Profile Gaps</div><div class="gaps-list">${gaps.map(g=>`<div class="gap-item">${g}</div>`).join('')}</div></div>`:'';
+
+  // Benefits
+  const benSec=benefits.length?`<div><div class="d-sec-title">Benefits</div><div class="benefits-wrap">${benefits.map(b=>`<span class="btag">${b}</span>`).join('')}</div></div>`:'';
+
+  // Responsibilities
+  const resp=payload.core_responsibilities||[];
+  const respSec=resp.length?`<div><div class="d-sec-title">Core Responsibilities</div><div class="resp-list">${resp.map(r=>`<div class="resp-item">${r}</div>`).join('')}</div></div>`:'';
+
+  // Quals
+  const basic=payload.basic_qualifications||[],pref=payload.preferred_qualifications||[];
+  const qualSec=(basic.length||pref.length)?`<div><div class="d-sec-title">Qualifications</div><div class="qual-cols">
+    <div><div class="qual-block-title">Required</div>${basic.map(q=>`<div class="qual-item">${q}</div>`).join('')}</div>
+    <div><div class="qual-block-title">Preferred</div>${pref.map(q=>`<div class="qual-item">${q}</div>`).join('')}</div>
+  </div></div>`:'';
+
+  return[meta,gatesSec,dimsSec,gapsSec,benSec,respSec,qualSec].filter(Boolean).join('');
+}
+
+// ── INIT ──
+fetchJobs();
+setInterval(fetchJobs,30000);
+</script>
+</body>
+</html>

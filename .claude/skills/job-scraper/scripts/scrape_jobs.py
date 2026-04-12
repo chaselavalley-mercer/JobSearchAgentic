@@ -1,15 +1,26 @@
+"""
+scrape_jobs.py — Phase 1 Playwright Scraper (Raw Text Only)
+Layer: 3 (Execution)
+
+Responsibility: Fetch raw page content from a job posting URL using a
+headless browser. No LLM calls. No structured extraction. Raw text output
+only — Claude Code handles extraction via the job-scraper SKILL.md.
+
+Usage:
+    python scrape_jobs.py --url <URL> --user <user_id>
+
+Output:
+    .tmp/{user_id}/raw_job.txt  — raw page text for Claude Code to parse
+"""
+
 import asyncio
-import os
 import argparse
+import os
 from playwright.async_api import async_playwright
 
 
 async def scrape_page_content(url: str) -> str:
-    """
-    Uses Playwright to navigate to a page, wait for rendering, and extract the text.
-    Playwright fetch only — no LLM calls. Claude Code handles extraction.
-    """
-    print(f"[*] Navigating headless browser to: {url}...")
+    print(f"[*] Navigating to: {url}")
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
         context = await browser.new_context(
@@ -21,13 +32,11 @@ async def scrape_page_content(url: str) -> str:
         page = await context.new_page()
 
         try:
-            await page.goto(url, wait_until="domcontentloaded", timeout=30000)
+            await page.goto(url, wait_until="networkidle", timeout=20000)
             await page.wait_for_timeout(2000)
 
-            # Capture final URL after any redirects (e.g. LinkedIn job view redirect)
-            final_url = page.url
-
             content = await page.evaluate("document.body.innerText")
+
             links = await page.evaluate("""() => {
                 return Array.from(document.querySelectorAll('a'))
                     .map(a => a.href)
@@ -35,7 +44,7 @@ async def scrape_page_content(url: str) -> str:
                     .join('\\n');
             }""")
 
-            return f"SOURCE_URL: {final_url}\n\n--- PAGE TEXT ---\n{content}\n\n--- RELEVANT LINKS ---\n{links}"
+            return f"--- PAGE TEXT ---\n{content}\n\n--- RELEVANT LINKS ---\n{links}"
 
         except Exception as e:
             print(f"[!] Error scraping {url}: {e}")
@@ -44,31 +53,34 @@ async def scrape_page_content(url: str) -> str:
             await browser.close()
 
 
-async def main():
-    parser = argparse.ArgumentParser(description="Playwright scraper — raw text only")
-    parser.add_argument("--url", type=str, required=True, help="Job posting URL to scrape")
-    parser.add_argument("--user", type=str, default="chase_lavalley", help="User profile performing the job search")
-    args = parser.parse_args()
-
-    raw_content = await scrape_page_content(args.url)
-
-    if not raw_content:
-        print("[!] Scraping failed or returned empty content. Exiting.")
+def save_raw(content: str, user: str, url: str):
+    if not content.strip():
+        print("[!] Empty content — nothing to save.")
         return
 
-    output_dir = f".tmp/{args.user}"
+    output_dir = f".tmp/{user}"
     os.makedirs(output_dir, exist_ok=True)
     output_file = os.path.join(output_dir, "raw_job.txt")
 
     with open(output_file, "w", encoding="utf-8") as f:
-        f.write(raw_content)
+        f.write(f"SOURCE_URL: {url}\n\n")
+        f.write(content)
 
-    print(f"[*] Raw content written to: {output_file}")
-    print(f"[*] Content length: {len(raw_content)} characters")
+    print(f"[*] Raw content saved to: {output_file}")
+
+
+async def main():
+    parser = argparse.ArgumentParser(description="Playwright scraper — raw text output only")
+    parser.add_argument("--url", required=True, help="Job posting URL")
+    parser.add_argument("--user", default="chase_lavalley", help="User ID")
+    args = parser.parse_args()
+
+    content = await scrape_page_content(args.url)
+    save_raw(content, args.user, args.url)
 
 
 if __name__ == "__main__":
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
-        print("\n[!] Scraping interrupted by user.")
+        print("\n[!] Interrupted.")

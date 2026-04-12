@@ -17,4 +17,5 @@ mcp_config.json
 *.pdf
 
 # Logs
+logs\
 logs/
