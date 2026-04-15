@@ -20,4 +20,4 @@ mcp_config.json
 logs\
 logs/
 
-./users
+.users/
