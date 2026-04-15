@@ -1,22 +1,22 @@
 """
-validate_job_json.py — Phase 1 Schema Gate
+validate_job.py — Transport-Agnostic Schema Validator
 Layer: 3 (Execution)
-Usage: python execution/validate_job_json.py <path_to_current_job.json>
+Usage:
+  CLI:    python execution/validate_job.py <path_to_json>
+  Import: from execution.validate_job import validate
 
-Exit codes:
-  0  — Schema is valid. Pipeline may proceed to Phase 2.
-  1  — Schema is invalid. Prints missing/malformed fields. Do NOT proceed.
-
-The script self-sources the project .env via python-dotenv so any future
-env-gated validation (e.g. API key presence checks) is already wired in.
+CLI mode preserves backward compatibility with job_pipeline_orchestrator.md.
+Import mode returns List[str] of errors — empty list = valid — with no side
+effects and no sys.exit(), safe for parallel subagent use.
 """
 
-import sys
 import json
 import os
+import sys
+
 
 # ---------------------------------------------------------------------------
-# Self-Source: load .env from project root before anything else
+# Self-Source: load .env from project root
 # ---------------------------------------------------------------------------
 try:
     from dotenv import load_dotenv
@@ -29,8 +29,9 @@ try:
 except (ImportError, AttributeError):
     pass
 
+
 # ---------------------------------------------------------------------------
-# Required schema definition
+# Schema definition
 # ---------------------------------------------------------------------------
 REQUIRED_TOP_LEVEL = ["job_title", "company", "location", "url", "analysis_payload"]
 
@@ -40,26 +41,40 @@ REQUIRED_ANALYSIS_PAYLOAD = [
     "preferred_qualifications",
 ]
 
-OPTIONAL_TOP_LEVEL = ["pay_salary", "experience_level"]  # documented but not enforced
+# Optional fields — allowed to be None; never raise an error for these
+OPTIONAL_TOP_LEVEL = ["pay_salary", "experience_level", "work_arrangement"]
 
+
+# ---------------------------------------------------------------------------
+# Core validate() — single source of truth
+# ---------------------------------------------------------------------------
 
 def validate(data: dict) -> list[str]:
-    """Return a list of human-readable validation error strings. Empty = valid."""
+    """
+    Validate the shape of a job dict.
+
+    Returns a list of human-readable error strings.
+    An empty list means the dict is valid and ready for the pipeline.
+
+    This function has no side effects: no file I/O, no printing, no sys.exit().
+    """
     errors = []
 
     if not isinstance(data, dict):
-        return ["Root JSON value must be an object (dict)."]
+        return ["Root value must be an object (dict)."]
 
-    # Check top-level required fields
     for field in REQUIRED_TOP_LEVEL:
         if field not in data:
             errors.append(f"Missing required top-level field: '{field}'")
-        elif field != "analysis_payload" and not isinstance(data[field], str):
-            errors.append(f"Field '{field}' must be a string, got: {type(data[field]).__name__}")
-        elif field != "analysis_payload" and str(data[field]).strip() == "":
+            continue
+        if field == "analysis_payload":
+            continue  # validated separately below
+        value = data[field]
+        if not isinstance(value, str):
+            errors.append(f"Field '{field}' must be a string, got: {type(value).__name__}")
+        elif value.strip() == "":
             errors.append(f"Field '{field}' must not be empty.")
 
-    # Check analysis_payload structure
     if "analysis_payload" in data:
         payload = data["analysis_payload"]
         if not isinstance(payload, dict):
@@ -68,20 +83,26 @@ def validate(data: dict) -> list[str]:
             for sub in REQUIRED_ANALYSIS_PAYLOAD:
                 if sub not in payload:
                     errors.append(f"Missing required field: 'analysis_payload.{sub}'")
-                elif not isinstance(payload[sub], str):
+                    continue
+                value = payload[sub]
+                if not isinstance(value, str):
                     errors.append(
                         f"Field 'analysis_payload.{sub}' must be a string, "
-                        f"got: {type(payload[sub]).__name__}"
+                        f"got: {type(value).__name__}"
                     )
-                elif str(payload[sub]).strip() == "":
+                elif value.strip() == "":
                     errors.append(f"Field 'analysis_payload.{sub}' must not be empty.")
 
     return errors
 
 
+# ---------------------------------------------------------------------------
+# CLI wrapper — preserves backward compatibility
+# ---------------------------------------------------------------------------
+
 def main():
     if len(sys.argv) != 2:
-        print("Usage: python execution/validate_job_json.py <path_to_current_job.json>")
+        print("Usage: python execution/validate_job.py <path_to_json>")
         sys.exit(1)
 
     json_path = sys.argv[1]
@@ -108,7 +129,6 @@ def main():
             print(f"  {i}. {err}")
         sys.exit(1)
 
-    # Print a clean summary of what was validated
     print("[GATE PASS] Schema valid.")
     print(f"  Job Title  : {data.get('job_title', '')}")
     print(f"  Company    : {data.get('company', '')}")

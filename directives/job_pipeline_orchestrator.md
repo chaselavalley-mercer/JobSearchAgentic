@@ -71,7 +71,7 @@ The `current_job.json` file MUST contain these top-level keys:
 Run the validation script. Phase 2 is blocked until this exits 0.
 
 ```powershell
-& 'C:\Users\cal-asus1\AppData\Local\Programs\Python\Python311\python.exe' execution/validate_job_json.py .tmp/{user_id}/current_job.json
+& 'C:\Users\cal-asus1\AppData\Local\Programs\Python\Python311\python.exe' execution/validate_job.py .tmp/{user_id}/current_job.json
 ```
 
 - **Exit 0**: Proceed to Phase 2.
