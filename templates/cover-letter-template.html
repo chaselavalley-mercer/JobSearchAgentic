@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="{{LANG}}">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{NAME}} — Cover Letter</title>
+<style>
+  /* --- REUSING RESUME FONTS --- */
+  @font-face {
+    font-family: 'Space Grotesk';
+    src: url('./fonts/space-grotesk-latin.woff2') format('woff2');
+    font-weight: 300 700;
+    font-style: normal;
+    font-display: swap;
+  }
+
+  @font-face {
+    font-family: 'DM Sans';
+    src: url('./fonts/dm-sans-latin.woff2') format('woff2');
+    font-weight: 100 1000;
+    font-style: normal;
+    font-display: swap;
+  }
+
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  html {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 11px;
+    line-height: 1.6;
+    color: #1a1a2e;
+    background: #ffffff;
+    padding: 0;
+    margin: 0;
+  }
+
+  .page {
+    width: 100%;
+    max-width: 8.5in; /* Hardcoded US Letter width */
+    margin: 0 auto;
+    padding: 2px 0;
+  }
+
+  /* --- REUSING RESUME HEADER --- */
+  .header {
+    margin-bottom: 30px;
+  }
+
+  .header h1 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 28px;
+    font-weight: 700;
+    color: #1a1a2e;
+    letter-spacing: -0.02em;
+    margin-bottom: 6px;
+    line-height: 1.1;
+  }
+
+  .header-gradient {
+    height: 2px;
+    background: linear-gradient(to right, hsl(187, 74%, 32%), hsl(270, 70%, 45%));
+    border-radius: 1px;
+    margin-bottom: 10px;
+  }
+
+  .contact-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 14px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 10.5px;
+    color: #555;
+  }
+
+  /* --- LETTER SPECIFICS --- */
+  .date-section {
+    margin-bottom: 20px;
+    font-weight: 500;
+  }
+
+  .recipient-section {
+    margin-bottom: 25px;
+    line-height: 1.4;
+  }
+
+  .recipient-name {
+    font-weight: 600;
+    color: #333;
+  }
+
+  .letter-body {
+    font-size: 11px;
+    color: #2f2f2f;
+    text-align: justify;
+  }
+
+  .letter-body p {
+    margin-bottom: 15px;
+  }
+
+  .sign-off {
+    margin-top: 30px;
+  }
+
+  .signature {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    color: hsl(270, 70%, 45%);
+    margin-top: 8px;
+  }
+
+  @media print {
+    .page { padding: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="header">
+    <h1>{{NAME}}</h1>
+    <div class="header-gradient"></div>
+    <div class="contact-row">
+      <span>{{PHONE}}</span>
+      <span>|</span>
+      <span>{{EMAIL}}</span>
+      <span>|</span>
+      <span>{{LOCATION}}</span>
+    </div>
+  </div>
+
+  <div class="date-section">
+    {{DATE}}
+  </div>
+
+  <div class="recipient-section">
+    <div class="recipient-name">{{RECIPIENT_NAME}}</div>
+    <div>{{RECIPIENT_TITLE}}</div>
+    <div style="font-weight: 600; color: hsl(187, 74%, 32%);">{{COMPANY_NAME}}</div>
+  </div>
+
+  <div class="letter-body">
+    <p>Dear {{RECIPIENT_NAME}},</p>
+    
+    {{LETTER_BODY}}
+
+    <div class="sign-off">
+      <p>Sincerely,</p>
+      <div class="signature">{{NAME}}</div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
