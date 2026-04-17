@@ -1,11 +1,11 @@
 """
-init_db.py — Scout Layer Database Initializer
+init_db.py — Permanent Job Database Initializer
 Layer: 3 (Execution)
 Usage: python execution/init_db.py --user <user_id>
 
 Creates (or no-ops if already exists):
-  .tmp/{user_id}/scraped_jobs.db
-    - jobs table
+  .users/{user_id}/jobs.db
+    - evaluations table  (matches api.py + save_evaluation.py schema)
     - scout_log table
 
 Safe to re-run at any time (CREATE TABLE IF NOT EXISTS).
@@ -17,47 +17,54 @@ import sqlite3
 import sys
 
 # ---------------------------------------------------------------------------
-# Self-Source: load .env — honours PYTHONIOENCODING for correct output encoding
+# Self-Source: load .env
 # ---------------------------------------------------------------------------
 try:
-    from dotenv import load_dotenv
+    from dotenv import load_dotenv  # type: ignore
     _env_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".env")
     load_dotenv(dotenv_path=_env_path, override=False)
     _enc = os.environ.get("PYTHONIOENCODING", "")
     if _enc:
-        sys.stdout.reconfigure(encoding=_enc)
-        sys.stderr.reconfigure(encoding=_enc)
+        import io
+        if isinstance(sys.stdout, io.TextIOWrapper):
+            sys.stdout.reconfigure(encoding=_enc)
+        if isinstance(sys.stderr, io.TextIOWrapper):
+            sys.stderr.reconfigure(encoding=_enc)
 except (ImportError, AttributeError):
     pass
 
 
 def init_db(user_id: str) -> str:
-    db_dir = os.path.join(".tmp", user_id)
+    # Permanent storage — lives in .users/, never in .tmp/
+    db_dir = os.path.join(".users", user_id)
     os.makedirs(db_dir, exist_ok=True)
-    db_path = os.path.join(db_dir, "scraped_jobs.db")
+    db_path = os.path.join(db_dir, "jobs.db")
 
     con = sqlite3.connect(db_path)
     cur = con.cursor()
 
     cur.executescript("""
-        CREATE TABLE IF NOT EXISTS jobs (
-            url                     TEXT PRIMARY KEY,
-            job_title               TEXT,
-            company                 TEXT,
-            location                TEXT,
-            work_arrangement        TEXT,
-            pay_salary              TEXT,
-            experience_level        TEXT,
-            core_responsibilities   TEXT,
-            required_qualifications TEXT,
-            preferred_qualifications TEXT,
-            salary_warning          INTEGER DEFAULT 0,
-            source                  TEXT,
-            discovered_at           TEXT,
-            status                  TEXT DEFAULT 'new',
-            evaluation_score        REAL,
-            evaluation_card         TEXT,
-            notes                   TEXT
+        CREATE TABLE IF NOT EXISTS evaluations (
+            job_id              TEXT PRIMARY KEY,
+            evaluated_at        TEXT,
+            title               TEXT,
+            company             TEXT,
+            location            TEXT,
+            url                 TEXT,
+            experience_level    TEXT,
+            pay_salary          TEXT,
+            work_arrangement    TEXT,
+            application_count   INTEGER,
+            benefits            TEXT,
+            posted_date         TEXT,
+            gate_passed         INTEGER,
+            gate_details        TEXT,
+            null_fields         TEXT,
+            scores              TEXT,
+            composite_score     REAL,
+            grade               TEXT,
+            recommendation      TEXT,
+            gaps                TEXT
         );
 
         CREATE TABLE IF NOT EXISTS scout_log (
@@ -81,7 +88,7 @@ def init_db(user_id: str) -> str:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Initialize scout layer SQLite database.")
+    parser = argparse.ArgumentParser(description="Initialize permanent jobs SQLite database.")
     parser.add_argument("--user", required=True, help="User ID (e.g. chase_lavalley)")
     args = parser.parse_args()
     init_db(args.user)

@@ -11,13 +11,18 @@ Runs on http://localhost:5050
 import json
 import os
 import sqlite3
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, send_file
 from flask_cors import CORS
 
 app = Flask(__name__)
 CORS(app)
 
 DB_PATH = os.path.join(".users", "chase_lavalley", "jobs.db")
+
+
+@app.route("/")
+def dashboard():
+    return send_file(os.path.join(os.path.dirname(os.path.abspath(__file__)), "dashboard.html"))
 
 
 def get_db():

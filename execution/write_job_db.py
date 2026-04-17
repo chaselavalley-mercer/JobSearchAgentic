@@ -1,96 +1,138 @@
 """
-write_job_db.py — Scout Layer DB Writer
+validate_db_row.py — DB-Native Schema Gate
 Layer: 3 (Execution)
-Usage: from execution.write_job_db import write_job
+Usage: python execution/validate_db_row.py --user <user_id> --url <url>
 
-Writes a validated, formatted job dict to the scout SQLite database.
-Uses INSERT OR IGNORE for deduplication safety across parallel subagents.
+Replaces validate_job_json.py. Queries the jobs.db row for the given URL
+and checks that all required fields are non-null and non-empty.
+
+Non-nullable (gate fails if missing):
+  job_title, company, location, url,
+  core_responsibilities, required_qualifications
+
+Acceptable as null (gate passes regardless):
+  pay_salary, benefits, experience_level,
+  work_arrangement, preferred_qualifications
+
+Exit codes:
+  0 — All required fields present. Pipeline may proceed to Phase 3.
+  1 — Validation failed. Prints missing fields. Do NOT proceed.
 """
 
+import argparse
 import os
 import sqlite3
 import sys
-from datetime import datetime, timezone
-from typing import Literal
 
 # ---------------------------------------------------------------------------
-# Self-Source: load .env — honours PYTHONIOENCODING for correct output encoding
+# Self-Source .env
 # ---------------------------------------------------------------------------
 try:
-    from dotenv import load_dotenv
+    from dotenv import load_dotenv  # type: ignore
     _env_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".env")
     load_dotenv(dotenv_path=_env_path, override=False)
     _enc = os.environ.get("PYTHONIOENCODING", "")
     if _enc:
-        sys.stdout.reconfigure(encoding=_enc)
-        sys.stderr.reconfigure(encoding=_enc)
+        import io
+        if isinstance(sys.stdout, io.TextIOWrapper):
+            sys.stdout.reconfigure(encoding=_enc)
+        if isinstance(sys.stderr, io.TextIOWrapper):
+            sys.stderr.reconfigure(encoding=_enc)
 except (ImportError, AttributeError):
     pass
 
 
-SOURCE_VALUES = Literal["linkedin_alert", "greenhouse_api", "playwright", "web_search"]
+# ---------------------------------------------------------------------------
+# Required fields definition
+# ---------------------------------------------------------------------------
+REQUIRED_FIELDS = [
+    "job_title",
+    "company",
+    "location",
+    "url",
+    "core_responsibilities",
+    "required_qualifications",
+]
+
+NULLABLE_FIELDS = [
+    "pay_salary",
+    "benefits",
+    "experience_level",
+    "work_arrangement",
+    "preferred_qualifications",
+]
 
 
-def _db_path(user_id: str) -> str:
-    return os.path.join(".tmp", user_id, "scraped_jobs.db")
-
-
-def write_job(
-    job: dict,
-    source: str,
-    user_id: str,
-) -> bool:
+# ---------------------------------------------------------------------------
+# Validation logic
+# ---------------------------------------------------------------------------
+def validate_row(db_path: str, url: str) -> list[str]:
     """
-    Write a job dict to the scout database.
-
-    Returns True if the row was written (new), False if it was a duplicate.
-    Raises sqlite3.OperationalError on connection failure after timeout.
+    Returns a list of validation error strings.
+    Empty list = valid, pipeline may proceed.
     """
-    path = _db_path(user_id)
+    errors = []
 
-    if not os.path.exists(path):
-        raise FileNotFoundError(
-            f"Scout DB not found at {path}. "
-            "Run: python execution/init_db.py --user " + user_id
-        )
+    if not os.path.exists(db_path):
+        return [f"Database not found: {db_path}"]
 
-    payload = job.get("analysis_payload", {}) or {}
-    salary_warning = 1 if not job.get("pay_salary") else 0
-    discovered_at = datetime.now(timezone.utc).isoformat()
+    con = sqlite3.connect(db_path)
+    con.row_factory = sqlite3.Row
+    cur = con.cursor()
 
-    con = sqlite3.connect(path, timeout=10)
-    try:
-        cur = con.cursor()
-        cur.execute(
-            """
-            INSERT OR IGNORE INTO jobs (
-                url, job_title, company, location, work_arrangement,
-                pay_salary, experience_level,
-                core_responsibilities, required_qualifications, preferred_qualifications,
-                salary_warning, source, discovered_at, status
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'new')
-            """,
-            (
-                job.get("url"),
-                job.get("job_title"),
-                job.get("company"),
-                job.get("location"),
-                job.get("work_arrangement"),
-                job.get("pay_salary"),
-                job.get("experience_level"),
-                payload.get("core_responsibilities"),
-                payload.get("required_qualifications"),
-                payload.get("preferred_qualifications"),
-                salary_warning,
-                source,
-                discovered_at,
-            ),
-        )
-        con.commit()
-        written = cur.rowcount > 0
-    finally:
-        con.close()
+    cur.execute("SELECT * FROM jobs WHERE url = ?", (url,))
+    row = cur.fetchone()
+    con.close()
 
-    label = "[WRITTEN]" if written else "[DUPLICATE]"
-    print(f"{label} {job.get('url', '(no url)')} — {job.get('job_title', '')} @ {job.get('company', '')}")
-    return written
+    if row is None:
+        return [f"No row found in jobs.db for URL: {url}"]
+
+    row_dict = dict(row)
+
+    for field in REQUIRED_FIELDS:
+        value = row_dict.get(field)
+        if value is None or str(value).strip() == "":
+            errors.append(f"Required field is null or empty: '{field}'")
+
+    return errors
+
+
+# ---------------------------------------------------------------------------
+# Main
+# ---------------------------------------------------------------------------
+def main():
+    parser = argparse.ArgumentParser(description="Validate a jobs.db row after scraping.")
+    parser.add_argument("--user", required=True, help="User ID (e.g. chase_lavalley)")
+    parser.add_argument("--url",  required=True, help="Job posting URL to validate")
+    args = parser.parse_args()
+
+    db_path = os.path.join(".users", args.user, "jobs.db")
+    errors = validate_row(db_path, args.url)
+
+    if errors:
+        print("[GATE FAIL] DB validation failed. Fix the following before proceeding:")
+        for i, err in enumerate(errors, 1):
+            print(f"  {i}. {err}")
+        sys.exit(1)
+
+    # Print clean summary of validated row
+    con = sqlite3.connect(db_path)
+    con.row_factory = sqlite3.Row
+    cur = con.cursor()
+    cur.execute("SELECT * FROM jobs WHERE url = ?", (args.url,))
+    row = dict(cur.fetchone())
+    con.close()
+
+    print("[GATE PASS] DB validation passed.")
+    print(f"  Job Title  : {row.get('job_title', '')}")
+    print(f"  Company    : {row.get('company', '')}")
+    print(f"  Location   : {row.get('location', '')}")
+    print(f"  URL        : {row.get('url', '')}")
+    print(f"  Pay/Salary : {row.get('pay_salary', 'null — acceptable')}")
+    print(f"  Exp Level  : {row.get('experience_level', 'null — acceptable')}")
+    print(f"  Nullable fields present: {[f for f in NULLABLE_FIELDS if row.get(f)]}")
+    sys.exit(0)
+
+
+if __name__ == "__main__":
+    main()

@@ -12,7 +12,21 @@ description: >
 **Input**: A job posting URL + user_id
 **Output**: `.tmp/{user_id}/scraped_jobs.json` — structured job object
 
+
+
 ---
+
+## Pre-Step — URL Routing
+
+Before running the Playwright scraper, check the URL domain:
+
+- **linkedin.com** → Do NOT call `scrape_jobs.py`. Use the browser tool 
+  directly (`browser_navigate` + `browser_snapshot`) to fetch the page 
+  content. Claude Code's browser tool has access to your real session 
+  cookies and can read authenticated LinkedIn pages.
+
+- **All other domains** (greenhouse.io, lever.co, etc.) → Proceed to 
+  Step 1 as normal, calling `scrape_jobs.py`.
 
 ## Step 1 — Run Playwright Scraper
 
