@@ -21,3 +21,5 @@ logs\
 logs/
 
 .users/
+
+node_modules/
