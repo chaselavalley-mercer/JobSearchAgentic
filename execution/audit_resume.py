@@ -53,10 +53,10 @@ PYTHON_PATH = os.environ.get(
     r"C:\Users\cal-asus1\AppData\Local\Programs\Python\Python311\python.exe"
 )
 
-# Minimum token length to be considered a meaningful claim (avoids flagging "AI", "a", "the")
-MIN_CLAIM_TOKEN_LEN = 4
+# Minimum token length for entity tokens
+MIN_CLAIM_TOKEN_LEN = 3
 
-# Tokens to always ignore regardless of presence in knowledge.md
+# Tokens to always ignore when building the knowledge corpus
 STOPWORDS = {
     "with", "using", "and", "the", "for", "from", "that", "this", "have",
     "been", "were", "will", "into", "over", "under", "their", "which", "while",
@@ -66,6 +66,50 @@ STOPWORDS = {
     "university", "experience", "engineering", "software", "hardware", "project",
     "projects", "technical", "including", "results", "during", "strong", "key",
     "lead", "led", "build", "test", "ensure", "provide", "drive"
+}
+
+# Always valid — common tech abbreviations and resume vocabulary
+KNOWN_SAFE = {
+    "api", "apis", "rest", "http", "https", "json", "sql", "cli",
+    "ide", "sdk", "csv", "pdf", "html", "css", "js", "url", "ai",
+    "ml", "llm", "cv", "gpa", "bs", "bse", "ga", "llc", "inc",
+    "github", "linkedin", "www", "com", "edu", "live"
+}
+
+# Excluded from entity extraction even though they start with capitals
+EXCLUDE_FROM_ENTITIES = {
+    # Months
+    "january", "february", "march", "april", "may", "june",
+    "july", "august", "september", "october", "november", "december",
+    "jan", "feb", "mar", "apr", "jun", "jul", "aug", "sep", "oct", "nov", "dec",
+    # Days
+    "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday",
+    "mon", "tue", "wed", "thu", "fri", "sat", "sun",
+    # Common suffixes/titles
+    "inc", "llc", "ltd", "corp",
+}
+
+# Common resume action verbs (sentence-starting) and generic title-case nouns
+# that should never be treated as entity claims regardless of capitalization.
+# Stored lowercase; compared via token.lower().
+COMMON_ENGLISH_CAPS = {
+    # Action verbs that start resume bullets
+    "designed", "built", "engineered", "developed", "implemented", "deployed",
+    "created", "architected", "managed", "led", "coached", "taught", "mentored",
+    "planned", "executed", "integrated", "optimized", "reduced", "increased",
+    "delivered", "demonstrated", "achieved", "ensured", "coordinated",
+    "standardized", "clarified", "instructed", "reinforced", "fusing",
+    "producing", "achieving", "enabling", "managing",
+    # Generic nouns appearing in skill headers and bullet prose
+    "vision", "pipelines", "pipeline", "integration", "services", "outputs",
+    "inputs", "platforms", "analysis", "generation", "architecture", "execution",
+    "processing", "production", "systems", "data", "tools", "skills", "labs",
+    "reports", "operations", "performance", "events", "tracking", "control",
+    "algorithm", "framework", "protocol", "interface", "platform", "database",
+    "storage", "workflow", "sequence", "logic", "documentation", "development",
+    "fundamentals", "procedures", "checklists", "guidance", "insights",
+    "behavior", "circuit", "sessions", "stores",
+    "engineering", "university",
 }
 
 
@@ -125,20 +169,32 @@ def build_knowledge_corpus(knowledge_path: str) -> set[str]:
 
 def extract_claim_tokens(line: str) -> list[str]:
     """
-    Extract candidate claim tokens from a resume bullet line.
-    These are the tokens we check against the knowledge corpus.
-    Focuses on: proper nouns (Title Case words), numbers/metrics, and tech keywords.
+    Extract entity tokens from a resume bullet line.
+    Only returns tokens that look like entities — proper nouns, abbreviations,
+    metrics, or technology names. Common English words are never returned.
+
+    Rules:
+    - Must be 3+ characters
+    - Must start with a capital letter, be all-caps, or contain digits
+    - Skipped if in KNOWN_SAFE or EXCLUDE_FROM_ENTITIES
     """
     tokens = re.findall(r"[A-Za-z0-9][A-Za-z0-9\+\#\.]*", line)
     claims = []
     for tok in tokens:
-        processed_tok = tok.rstrip('.')
-        if not processed_tok:
+        processed = tok.rstrip('.')
+        if not processed or len(processed) < MIN_CLAIM_TOKEN_LEN:
             continue
-        lower = processed_tok.lower()
-        if len(lower) < MIN_CLAIM_TOKEN_LEN:
+        lower = processed.lower()
+        if lower in KNOWN_SAFE or lower in EXCLUDE_FROM_ENTITIES:
             continue
-        if lower in STOPWORDS:
+        # Entity filter: capitals, all-caps, or contains digits
+        is_capitalized = processed[0].isupper()
+        is_allcaps = processed.isupper() and len(processed) >= 2
+        has_digits = any(c.isdigit() for c in processed)
+        if not (is_capitalized or is_allcaps or has_digits):
+            continue
+        # Skip common English words that appear capitalized but aren't entities
+        if lower in COMMON_ENGLISH_CAPS:
             continue
         claims.append(lower)
     return claims
@@ -147,30 +203,30 @@ def extract_claim_tokens(line: str) -> list[str]:
 def audit_lines(
     resume_lines: list[str],
     corpus: set[str]
-) -> tuple[list[str], list[dict]]:
+) -> tuple[list[str], list[dict], int]:
     """
-    Compare resume lines against the knowledge corpus.
+    Compare resume lines against the knowledge corpus using entity-token matching.
     Returns:
       - clean_lines: lines that fully pass
-      - flagged_lines: list of {line, unknown_tokens} for lines with unverified claims
+      - flagged_lines: list of {line, unknown_tokens} for lines with unverified entity claims
+      - total_entities: total count of entity tokens checked across all lines
     """
     clean = []
     flagged = []
+    total_entities = 0
 
     for line in resume_lines:
-        unknown = []
-        for token in extract_claim_tokens(line):
-            if token not in corpus:
-                unknown.append(token)
+        claims = extract_claim_tokens(line)
+        total_entities += len(claims)
+        unknown = [tok for tok in claims if tok not in corpus]
 
-        # A line is flagged only if it has bullet-like content (starts with action
-        # verbs or is long enough to be a claim). Short header lines are skipped.
-        if unknown and len(line.split()) >= 5:
+        # Only flag substantive lines (6+ words) with unknown entity tokens
+        if unknown and len(line.split()) >= 6:
             flagged.append({"line": line, "unknown_tokens": unknown})
         else:
             clean.append(line)
 
-    return clean, flagged
+    return clean, flagged, total_entities
 
 
 def write_log(
@@ -179,7 +235,8 @@ def write_log(
     knowledge_path: str,
     flagged: list[dict],
     resume_lines: list[str],
-    passed: bool
+    passed: bool,
+    entity_stats: dict
 ) -> str:
     """Write a structured audit log and return the log file path."""
     os.makedirs(log_dir, exist_ok=True)
@@ -201,6 +258,7 @@ def write_log(
         f"Status     : {status}",
         f"Lines      : {len(resume_lines)} total resume lines audited",
         f"Flagged    : {len(flagged)} lines with unverified claim tokens",
+        f"Entity tokens checked : {entity_stats['checked']} | Flagged: {entity_stats['flagged']}",
         "",
     ]
 
@@ -256,8 +314,10 @@ def main():
     print(f"[INFO] Auditing {len(resume_lines)} lines against "
           f"{len(corpus)} knowledge tokens...")
 
-    _, flagged = audit_lines(resume_lines, corpus)
+    _, flagged, total_entities = audit_lines(resume_lines, corpus)
     passed = len(flagged) == 0
+
+    entity_stats = {"checked": total_entities, "flagged": sum(len(f["unknown_tokens"]) for f in flagged)}
 
     log_path = write_log(
         log_dir=args.log_dir,
@@ -265,7 +325,8 @@ def main():
         knowledge_path=args.knowledge,
         flagged=flagged,
         resume_lines=resume_lines,
-        passed=passed
+        passed=passed,
+        entity_stats=entity_stats
     )
 
     if passed:

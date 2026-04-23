@@ -21,3 +21,5 @@ jobs.apple.com
 amazon.jobs
 microsoft.com/en-us/jobs
 kpmguscareers.com
+jobright.ai
+bitdeer.breezy.hr/

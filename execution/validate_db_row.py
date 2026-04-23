@@ -19,13 +19,16 @@ import os
 # Self-Source: load .env from project root before anything else
 # ---------------------------------------------------------------------------
 try:
-    from dotenv import load_dotenv
+    from dotenv import load_dotenv  # type: ignore
     _env_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".env")
     load_dotenv(dotenv_path=_env_path, override=False)
     _enc = os.environ.get("PYTHONIOENCODING", "")
     if _enc:
-        sys.stdout.reconfigure(encoding=_enc)
-        sys.stderr.reconfigure(encoding=_enc)
+        import io
+        if isinstance(sys.stdout, io.TextIOWrapper):
+            sys.stdout.reconfigure(encoding=_enc)
+        if isinstance(sys.stderr, io.TextIOWrapper):
+            sys.stderr.reconfigure(encoding=_enc)
 except (ImportError, AttributeError):
     pass
 
